@@ -1,5 +1,12 @@
-from sqlalchemy import Integer, String, Text, Boolean, DateTime, func, Column
+from sqlalchemy import Integer, String, Text, Boolean, DateTime, func, Column, Enum as sqlEnum
+from enum import Enum
 from .database import Base
+
+class StatusEnum(str, Enum):
+    new = "new"
+    scheduled = "scheduled"
+    in_progress = "in_progress"
+    completed = "completed"
 
 def create_table(table_name: str):
     class Task(Base):
@@ -9,8 +16,9 @@ def create_table(table_name: str):
         title = Column(String(255), nullable=False)
         description = Column(Text, nullable=True)
         completed = Column(Boolean, default=False)
+        status = Column(sqlEnum(StatusEnum), default=StatusEnum.new)
         created_on = Column(DateTime(timezone=True), server_default=func.now())
-        updated_on = Column(DateTime(timezone=True), server_default=func.now())
+        updated_on = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
         scheduled = Column(DateTime(timezone=True), nullable=True)
         is_scheduled = Column(Boolean, default=False)
     return Task

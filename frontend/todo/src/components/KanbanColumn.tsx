@@ -1,6 +1,8 @@
-import { Box, Heading } from '@chakra-ui/react';
+import { Box, Heading, VStack } from '@chakra-ui/react';
+import TaskCard from './TaskCard';
+import type { TaskRead } from '../schemas.ts';
 
-function KanbanColumn({ title }: { title: string }) {
+function KanbanColumn({ title, tasks }: { title: string; tasks: TaskRead[] }) {
   return (
     <Box
       bg="white"
@@ -13,7 +15,11 @@ function KanbanColumn({ title }: { title: string }) {
       <Heading size="md" mb={4} textAlign="center">
         {title}
       </Heading>
-      {/* This is where the tasks will be rendered */}
+      <VStack spacing={3} alignItems="stretch">
+        {tasks.map((task) => (
+          <TaskCard key={task.id} task={task} />
+        ))}
+      </VStack>
     </Box>
   );
 }

@@ -1,10 +1,16 @@
 import { Box, Heading, VStack } from '@chakra-ui/react';
+import { useDroppable } from '@dnd-kit/core';
 import TaskCard from './TaskCard';
-import type { TaskRead } from '../schemas.ts';
+import type { TaskRead } from '../schemas';
 
-function KanbanColumn({ title, tasks }: { title: string; tasks: TaskRead[] }) {
+function KanbanColumn({ title, tasks, id }: { title: string; tasks: TaskRead[]; id: string }) {
+  const { setNodeRef } = useDroppable({
+    id: id,
+  });
+
   return (
     <Box
+      ref={setNodeRef}
       bg="white"
       w="300px"
       p={4}

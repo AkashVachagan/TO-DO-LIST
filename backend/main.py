@@ -48,6 +48,12 @@ def update_task(task_id: int, task: schemas.TaskUpdateStatus, db: Session = Depe
     db.refresh(task_db)
     return task_db
 
+@app.delete("/tasks/all")
+def delete_all_tasks(db: Session = Depends(get_db)):
+    deleted_count = db.query(TASKS).delete()
+    db.commit()
+    return {"message": f"Successfully deleted {deleted_count} tasks"}
+
 @app.delete("/tasks/{task_id}")
 def delete_task(task_id: int, db: Session = Depends(get_db)):
     task = db.query(TASKS).filter(TASKS.id == task_id).first()

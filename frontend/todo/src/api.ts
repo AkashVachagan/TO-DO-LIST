@@ -24,3 +24,18 @@ export const updateTaskStatus = async (taskId: number, newStatus: string) => {
     }
     return response.json();
 };
+
+export const createTask = async (taskData: TaskCreate): Promise<TaskRead> => {
+    const response = await fetch(`${API_URL}/tasks/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(taskData),
+    });
+
+    if (!response.ok) {
+        throw new Error('Failed to create task');
+    }
+    return response.json();
+};

@@ -1,189 +1,150 @@
-import { Flex, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, useDisclosure, Box, IconButton, useColorMode, useColorModeValue, HStack } from '@chakra-ui/react';
-import { FaSun, FaMoon } from 'react-icons/fa';
-import KanbanColumn from './KanbanColumn';
+import { Flex, Modal, ModalOverlay, ModalContent, ModalHeader, ModalCloseButton, ModalBody, useDisclosure, Box } from '@chakra-ui/react';
 import { DndContext, DragOverlay } from '@dnd-kit/core';
 import type { DragEndEvent, DragStartEvent, DragCancelEvent } from '@dnd-kit/core';
+import { motion } from 'framer-motion';
+import KanbanColumn from './KanbanColumn';
 import TaskForm from './TaskForm';
 import TaskCard from './TaskCard';
 import type { TaskRead } from '../schemas';
-import { useEffect, useState } from 'react';
+import { useState, useMemo } from 'react';
 
-// ... (interface KanbanBoardProps remains the same)
+const MotionFlex = motion(Flex);
+const MotionBox = motion(Box);
+
 interface KanbanBoardProps {
-  tasks: TaskRead[];
-  onTaskCreated: (newTask: TaskRead) => void;
-  onTaskStatusUpdate: (taskId: number, newStatus: string) => Promise<void>;
-  onTaskDelete: (taskId: number) => Promise<void>;
-  onTaskUpdate: (updatedTask: TaskRead) => Promise<void>;
+    tasks: TaskRead[];
+    onTaskCreated: (newTask: Omit<TaskRead, 'id' | 'created_on' | 'updated_on'>) => Promise<void>;
+    onTaskStatusUpdate: (taskId: number, newStatus: string) => Promise<void>;
+    onTaskDelete: (taskId: number) => Promise<void>;
+    onTaskUpdate: (updatedTask: TaskRead) => Promise<void>;
+    sortOrder: string;
 }
 
-function KanbanBoard({ tasks, onTaskCreated, onTaskStatusUpdate, onTaskDelete, onTaskUpdate }: KanbanBoardProps) {
-  const { isOpen, onOpen, onClose } = useDisclosure();
-  // Get the toggle function instead of the setter
-  const { colorMode, toggleColorMode } = useColorMode();
-  const [editingTask, setEditingTask] = useState<TaskRead | null>(null);
-  const [createStatus, setCreateStatus] = useState<'new' | 'scheduled' | 'in_progress' | 'completed' | null>(null);
-  const [activeTaskId, setActiveTaskId] = useState<number | null>(null);
-  const [activeTask, setActiveTask] = useState<TaskRead | null>(null);
-  const statuses = ['new', 'scheduled', 'in_progress', 'completed'];
+function KanbanBoard({ tasks, onTaskCreated, onTaskStatusUpdate, onTaskDelete, onTaskUpdate, sortOrder }: KanbanBoardProps) {
+    const { isOpen, onOpen, onClose } = useDisclosure();
+    const [editingTask, setEditingTask] = useState<TaskRead | null>(null);
+    const [createStatus, setCreateStatus] = useState<TaskRead['status'] | null>(null);
+    const [activeTask, setActiveTask] = useState<TaskRead | null>(null);
+    const statuses: TaskRead['status'][] = ['new', 'scheduled', 'in_progress', 'completed'];
 
-  // Dynamic colors for theme
-  const boardBg = useColorModeValue('gray.100', 'gray.800');
-  const headerColor = useColorModeValue('black', 'white');
-  const switchBg = useColorModeValue('gray.200', 'gray.700');
-  const activeSwitchBg = useColorModeValue('blue.500', 'blue.300');
-  const activeSwitchColor = useColorModeValue('white', 'gray.800');
-
-  useEffect(() => {
-    const text = 'Just do it';
-    const el = document.getElementById('typing-header');
-    if (!el) return;
-    el.textContent = '';
-    let i = 0;
-    const interval = setInterval(() => {
-      el.textContent = text.slice(0, i + 1);
-      i += 1;
-      if (i >= text.length) {
-        clearInterval(interval);
-      }
-    }, 120);
-    return () => clearInterval(interval);
-  }, []);
-
-  // ... (all handler functions like handleEdit, handleDragStart, etc. remain the same)
-  const handleEdit = (task: TaskRead) => {
-    setEditingTask(task);
-    onOpen();
-  };
-
-  const handleClose = () => {
-    setEditingTask(null);
-    onClose();
-  };
-
-  const groupedTasks = statuses.map(status => {
-    const list = tasks.filter(task => task.status === status);
-    return {
-      status,
-      tasks: list,
-      count: list.length,
+    const boardVariants = {
+        hidden: { opacity: 0 },
+        visible: { opacity: 1, transition: { staggerChildren: 0.1 } },
     };
-  });
-  
-  const handleDragStart = (event: DragStartEvent) => {
-    const id = event.active.id as number;
-    setActiveTaskId(id);
-    const task = tasks.find(t => t.id === id) || null;
-    setActiveTask(task);
-  };
 
-  const handleDragCancel = (_event: DragCancelEvent) => {
-    setActiveTaskId(null);
-    setActiveTask(null);
-  };
+    const columnVariants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: { y: 0, opacity: 1 },
+    };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const taskId = active.id as number;
-      const newStatus = over.id as string;
-      onTaskStatusUpdate(taskId, newStatus);
-    }
-    setActiveTaskId(null);
-    setActiveTask(null);
-  };
+    const handleEdit = (task: TaskRead) => {
+        setEditingTask(task);
+        onOpen();
+    };
 
-  return (
-    <>
-      <Flex w="100%" justifyContent="center" alignItems="center" mt={4} mb={2} position="relative">
-        <Flex fontSize="2xl" fontWeight="bold" fontFamily="Poppins, sans-serif" color={headerColor}>
-          <span id="typing-header" style={{ display: 'inline-block', whiteSpace: 'pre' }}></span>
-          <span className="blink" style={{ marginLeft: '2px' }}>|</span>
-        </Flex>
-        
-        {/* UPDATED THEME SWITCHER */}
-        <HStack
-          as="button" // Render the container as a button for accessibility
-          onClick={toggleColorMode} // Apply the toggle function to the whole container
-          aria-label="Toggle color mode"
-          spacing={1}
-          bg={switchBg}
-          p={1}
-          borderRadius="full"
-          position="absolute"
-          right={4}
-          top="50%"
-          transform="translateY(-50%)"
-          // Reset default button styles
-          border="none"
-          outline="none"
-          _focus={{ outline: "none", boxShadow: "outline" }}
-        >
-          <IconButton
-            aria-label="Light mode is active"
-            icon={<FaSun />}
-            isRound
-            size="sm"
-            bg={colorMode === 'light' ? activeSwitchBg : 'transparent'}
-            color={colorMode === 'light' ? activeSwitchColor : undefined}
-            pointerEvents="none" // Make the icon non-interactive
-          />
-          <IconButton
-            aria-label="Dark mode is active"
-            icon={<FaMoon />}
-            isRound
-            size="sm"
-            bg={colorMode === 'dark' ? activeSwitchBg : 'transparent'}
-            color={colorMode === 'dark' ? activeSwitchColor : undefined}
-            pointerEvents="none" // Make the icon non-interactive
-          />
-        </HStack>
-      </Flex>
-      <DndContext onDragStart={handleDragStart} onDragCancel={handleDragCancel} onDragEnd={handleDragEnd}>
-        {/* ... (rest of the component remains the same) */}
-        <Flex p={4} minH="calc(100vh - 70px)" h="calc(100vh - 70px)" bg={boardBg} justifyContent="center" gap={4} overflow="hidden">
-          {groupedTasks.map((column) => (
-            <KanbanColumn
-              key={column.status}
-              id={column.status}
-              title={`${column.status.replace('_', ' ')}`}
-              tasks={column.tasks}
-              onTaskDelete={onTaskDelete}
-              onEdit={handleEdit}
-              activeId={activeTaskId}
-              onAdd={(status) => {
-                setEditingTask(null);
-                setCreateStatus(status as 'new' | 'scheduled');
-                onOpen();
-              }}
-            />
-          ))}
-        </Flex>
-        <DragOverlay dropAnimation={null}>
-          {activeTask ? (
-            <TaskCard task={activeTask} onDelete={async () => {}} onEdit={() => {}} />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+    const handleClose = () => {
+        setEditingTask(null);
+        setCreateStatus(null);
+        onClose();
+    };
 
-      <Modal isOpen={isOpen} onClose={handleClose}>
-        <ModalOverlay />
-        <ModalContent>
-          <ModalHeader>{editingTask ? "Edit Task" : "Create a new task"}</ModalHeader>
-          <ModalCloseButton />
-          <ModalBody>
-            <TaskForm 
-              task={editingTask}
-              createStatus={editingTask ? undefined : createStatus ?? undefined}
-              onTaskCreated={onTaskCreated} 
-              onTaskUpdated={onTaskUpdate}
-              onClose={handleClose}
-            />
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-    </>
-  );
+    const groupedTasks = useMemo(() => {
+        const priorityMap: { [key: string]: number } = { high: 3, medium: 2, low: 1 };
+        return statuses.map(status => {
+            const list = tasks.filter(task => task.status === status);
+            list.sort((a, b) => {
+                switch (sortOrder) {
+                    case 'created_on_desc':
+                        return new Date(b.created_on).getTime() - new Date(a.created_on).getTime();
+                    case 'due_date_asc':
+                        if (!a.due_date) return 1;
+                        if (!b.due_date) return -1;
+                        return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+                    case 'priority':
+                    default:
+                        return (priorityMap[b.priority] || 0) - (priorityMap[a.priority] || 0);
+                }
+            });
+            return { status, tasks: list };
+        });
+    }, [tasks, sortOrder, statuses]);
+
+    const handleDragStart = (event: DragStartEvent) => {
+        const id = event.active.id as number;
+        const task = tasks.find(t => t.id === id) || null;
+        setActiveTask(task);
+    };
+
+    const handleDragCancel = (_event: DragCancelEvent) => {
+        setActiveTask(null);
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        setActiveTask(null);
+        if (over && active.id !== over.id) {
+            const taskId = active.id as number;
+            const newStatus = over.id as string;
+            onTaskStatusUpdate(taskId, newStatus);
+        }
+    };
+
+    return (
+        <>
+            <DndContext onDragStart={handleDragStart} onDragCancel={handleDragCancel} onDragEnd={handleDragEnd}>
+                <MotionFlex
+                    variants={boardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    px={4}
+                    pb={4}
+                    flexGrow={1}
+                    minH={0}
+                    justifyContent="center"
+                    gap={6}
+                    overflow="hidden"
+                >
+                    {groupedTasks.map((column) => (
+                        <MotionBox variants={columnVariants} key={column.status}>
+                            <KanbanColumn
+                                id={column.status}
+                                title={`${column.status.replace('_', ' ')}`}
+                                tasks={column.tasks}
+                                onTaskDelete={onTaskDelete}
+                                onEdit={handleEdit}
+                                activeId={activeTask?.id}
+                                // This is where the second error was fixed
+                                onAdd={(status: TaskRead['status']) => {
+                                    setEditingTask(null);
+                                    setCreateStatus(status);
+                                    onOpen();
+                                }}
+                            />
+                        </MotionBox>
+                    ))}
+                </MotionFlex>
+                <DragOverlay dropAnimation={null}>
+                    {activeTask ? (<Box boxShadow="2xl"><TaskCard task={activeTask} onDelete={async () => {}} onEdit={() => {}} /></Box>) : null}
+                </DragOverlay>
+            </DndContext>
+            <Modal isOpen={isOpen} onClose={handleClose} isCentered>
+                <ModalOverlay bg="blackAlpha.300" backdropFilter="blur(10px)" />
+                <ModalContent>
+                    <ModalHeader>{editingTask ? "Edit Task" : "Create a new task"}</ModalHeader>
+                    <ModalCloseButton />
+                    <ModalBody>
+                        <TaskForm 
+                            task={editingTask} 
+                            createStatus={createStatus ?? undefined} 
+                            onTaskCreated={onTaskCreated} 
+                            onTaskUpdated={onTaskUpdate} 
+                            onClose={handleClose} 
+                        />
+                    </ModalBody>
+                </ModalContent>
+            </Modal>
+        </>
+    );
 }
 
 export default KanbanBoard;

@@ -3,8 +3,17 @@ from sqlalchemy.orm import Session
 from .database import Base, engine, sessionLocal
 from .models import create_table, PriorityEnum, StatusEnum
 from . import schemas
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 TASKS = create_table("tasks")
 

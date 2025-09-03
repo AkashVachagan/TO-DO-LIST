@@ -1,9 +1,8 @@
 {
   "dependencies": {
-    "@fullcalendar/daygrid": "^6.1.19",
-    "@fullcalendar/react": "^6.1.19",
-    "axios": "^1.11.0",
-    "dayjs": "^1.11.18",
-    "react-router-dom": "^7.8.2"
+    "@chakra-ui/react": "^3.26.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "framer-motion": "^12.23.12"
   }
 }

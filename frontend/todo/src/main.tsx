@@ -2,7 +2,6 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChakraProvider, ColorModeScript, extendTheme } from '@chakra-ui/react';
 import App from './App.tsx';
-import './index.css';
 
 // 1. Define the configuration for the color mode
 const config = {
